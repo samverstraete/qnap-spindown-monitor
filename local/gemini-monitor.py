@@ -5,7 +5,7 @@ import datetime
 import os, daemon, signal
 from daemon import pidfile
 
-# NAS variables
+# monitor variables
 address = "0.0.0.0"
 username = "admin"
 password = "password"
@@ -15,7 +15,7 @@ url = "http://address/upload.php"
 # general variables
 logfile = "/var/log/gemini-monitor.log"
 
-from gemini_monitor_settings import * #real variabeles override the top ones
+from gemini_monitor_settings import * #real variabeles
 
 if os.stat(logfile).st_size > 5000000:
 	os.remove(logfile) 
@@ -54,12 +54,23 @@ def run():
 	setup()
 	while True:
 		currvalue = '0x00090000' #default 9
+		needsreconnect = False
+		
 		try:
 			currvalue = getLedState()
-		except OSError:
+		except OSError as err:
+			print("OSError: {0}".format(err))
+			needsreconnect = True
 			time.sleep(60)
+			
+		try:
+			uploadLedValue(currvalue)
+		except ConnectionError as err:
+			print("ConnectionError: {0}".format(err))
+			time.sleep(60)
+			
+		if needsreconnect:
 			setup()
-		uploadLedValue(currvalue)
 		time.sleep(30)
 
 
